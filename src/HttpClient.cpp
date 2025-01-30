@@ -7,10 +7,13 @@
 HttpClient::HttpClient() {
     m_networkManager = new QNetworkAccessManager();
 
+// FIXME: see if this can be fixed instead.
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     // update QNAM's config with a much lower timeout value since this goes over localhost
     QNetworkConfiguration qnamConf = m_networkManager->activeConfiguration();
     qnamConf.setConnectTimeout(250); // in milliseconds
     m_networkManager->setConfiguration(qnamConf);
+#endif
 
     QObject::connect(m_networkManager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
 

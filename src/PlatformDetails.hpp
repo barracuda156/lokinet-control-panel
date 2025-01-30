@@ -3,7 +3,12 @@
 
 #include <QObject>
 #include <QPoint>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QJSValue>
+#else
+#include <QScriptValue>
+#define QJSValue QScriptValue
+#endif
 
 #include "process/LokinetProcessManager.hpp"
 

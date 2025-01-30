@@ -2,7 +2,11 @@
 
 #include <QPoint>
 #include <QCursor>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QJSEngine>
+#else
+#include <QScriptEngine>
+#endif
 #include <QDebug>
 
 #include "process/LokinetProcessManager.hpp"
@@ -103,12 +107,17 @@ Q_INVOKABLE bool PlatformDetails::isLokinetRunning() {
 }
 
 Q_INVOKABLE void PlatformDetails::downloadBootstrapFile(const QString& url, const QJSValue& callback) {
-
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     if (! callback.isUndefined() && ! callback.isCallable()) {
         qDebug() << "callback should be a function";
     	return;
     }
-
+#else
+    if (callback.isValid() && ! callback.isFunction()) {
+        qDebug() << "callback should be a function";
+    	return;
+    }
+#endif
     auto manager = LokinetProcessManager::instance();
     manager->downloadBootstrapFile(url.toStdString(), [=](int error, const std::string& msg) {
 

@@ -1,14 +1,25 @@
 #include <QApplication>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QQmlApplicationEngine>
+#else
+#include <QtDeclarative>
+#include <QDeclarativeEngine>
+#include <QtScript>
+#include <QJsonObject.h>
+#define QQmlApplicationEngine QDeclarativeEngine
+#define QStringLiteral QString::fromUtf8
+#endif
 #include <QIcon>
 #include <QDebug>
 #include <QtGlobal>
 
 #include "QmlClipboardAdapter.hpp"
 #include "LokinetApiClient.hpp"
-#include "ApiPoller.hpp"
 #include "PlatformDetails.hpp"
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#include "ApiPoller.hpp"
 #include "BandwidthChartData.hpp"
+#endif
 #include "lmq_settings.hpp"
 
 #if defined(SYSTEMD)
@@ -47,13 +58,17 @@ int32_t main(int32_t argc, char *argv[])
     qRegisterMetaType<QJSValueList>("QJSValueList");
     qmlRegisterType<LokinetApiClient>("LokinetApiClient", 1, 0, "LokinetApiClient");
     qmlRegisterType<QmlClipboardAdapter>("QClipboard", 1, 0, "QClipboard");
-    qmlRegisterType<ApiPoller>("ApiPoller", 1, 0, "ApiPoller");
     qmlRegisterType<PlatformDetails>("PlatformDetails", 1, 0, "PlatformDetails");
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    qmlRegisterType<ApiPoller>("ApiPoller", 1, 0, "ApiPoller");
     qmlRegisterType<BandwidthChartData>("BandwidthChartData", 1, 0, "BandwidthChartData");
+#endif
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+#endif
 #endif
     
     lmq.start();
@@ -81,7 +96,6 @@ int32_t main(int32_t argc, char *argv[])
     engine.globalObject().setProperty("notray", notray);
     engine.globalObject().setProperty("isSystemd", isSystemd);
     engine.load(QUrl(QStringLiteral("qrc:/res/qml/main.qml")));
-
 
     return app.exec();
 }

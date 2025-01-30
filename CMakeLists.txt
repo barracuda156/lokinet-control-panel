@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)  # Has to be set before `project()`, and ignored on non-macos
+if(NOT MACOS_LEGACY)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12)  # Has to be set before `project()`, and ignored on non-macos
+endif()
 
 project(lokinet-gui
     VERSION 0.3.4
@@ -13,7 +15,8 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-option(BUILD_STATIC_DEPS "build every dep statically (ON/OFF)" OFF)
+option(BUILD_STATIC_DEPS "Build every dep statically (ON/OFF)" OFF)
+option(MACOS_LEGACY "Build for legacy versions of macOS" OFF)
 
 if(BUILD_STATIC_DEPS)
   find_package(Git)
@@ -46,27 +49,43 @@ else()
   add_library(oxenmq::oxenmq ALIAS oxenmq)
 endif()
 
-find_package(Qt5 COMPONENTS Qml Quick Widgets Charts Svg REQUIRED)
+if(MACOS_LEGACY)
+  find_package(Qt4 COMPONENTS QtCore QtGui QtDeclarative QtNetwork QtSvg REQUIRED)
+else()
+  find_package(Qt5 COMPONENTS Qml Quick Widgets Charts Svg REQUIRED)
+endif()
+
 find_package(Threads)
+
+if(NOT MACOS_LEGACY)
+  set(extras "src/ApiPoller.cpp src/BandwidthChartData.cpp src/HttpClient.cpp")
+endif()
 
 add_executable(lokinet-gui
     src/main.cpp
     src/QmlClipboardAdapter.cpp
-    src/HttpClient.cpp
     src/LokinetApiClient.cpp
-    src/ApiPoller.cpp
     src/PlatformDetails.cpp
-    src/BandwidthChartData.cpp
     src/process/LokinetProcessManager.cpp
+    ${extras}
 
     res/resources.qrc
     )
 
-target_link_libraries(lokinet-gui PRIVATE
+if(MACOS_LEGACY)
+  add_definitions(-I/opt/local/include/QJson4)
+  target_link_libraries(lokinet-gui PRIVATE
+    Qt4::QtCore Qt4::QtDeclarative Qt4::QtNetwork Qt4::QtGui Qt4::QtSvg QJson4
+    Threads::Threads
+    oxenmq
+    )
+else()
+  target_link_libraries(lokinet-gui PRIVATE
     Qt5::Core Qt5::Qml Qt5::Quick Qt5::Widgets Qt5::Charts Qt5::Svg
     Threads::Threads
     oxenmq
     )
+endif()
 
 if (WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "-mwindows -fstack-protector")
@@ -111,6 +130,7 @@ if(APPLE)
         set(MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
         set(MACOSX_BUNDLE_COPYRIGHT "© 2020, The Loki Project")
 
+      if(NOT MACOS_LEGACY)
         get_target_property(uic_location Qt5::uic IMPORTED_LOCATION)
         get_filename_component(qt_dir ${uic_location} DIRECTORY)
         if(MACOS_SIGN)
@@ -128,6 +148,7 @@ if(APPLE)
                 COMMAND "${qt_dir}/macdeployqt" LokinetGUI.app -always-overwrite -qmldir=${PROJECT_SOURCE_DIR}/res
                 )
         endif()
+      endif()
     endif()
 elseif(WIN32)
     target_sources(lokinet-gui PRIVATE src/process/WindowsLokinetProcessManager.cpp src/version.rc)

@@ -2,8 +2,15 @@
 #define __LOKI_LOKINET_API_CLIENT_HPP__
 
 #include <QObject>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QJSValue>
 #include <QJsonObject>
+#else
+#include <QScriptValue>
+#include <QJsonObject.h>
+#define QJSValue QScriptValue
+#define QJSValueList QScriptValueList
+#endif
 #include <functional>
 #include <optional>
 

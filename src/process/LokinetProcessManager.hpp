@@ -2,6 +2,7 @@
 #define __LOKI_LOKINET_PROCESS_MANAGER_HPP__
 
 #include <QObject>
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <memory>

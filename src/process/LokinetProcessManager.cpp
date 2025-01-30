@@ -3,7 +3,11 @@
 #include <chrono>
 #include <QDebug>
 #include <QFile>
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QStandardPaths>
+#else
+#include <QDesktopServices>
+#endif
 #include <sstream>
 #include <memory>
 #include <mutex>
@@ -262,8 +266,13 @@ LokinetProcessManager::ProcessStatus LokinetProcessManager::queryProcessStatus()
 
 QString LokinetProcessManager::getDefaultBootstrapFileLocation()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     return QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
         + "/.lokinet/bootstrap.signed";
+#else
+    return QDesktopServices::storageLocation(QDesktopServices::HomeLocation)
+        + "/.lokinet/bootstrap.signed";
+#endif
 }
 
 LokinetProcessManager::ProcessStatus LokinetProcessManager::getLastKnownStatus()
