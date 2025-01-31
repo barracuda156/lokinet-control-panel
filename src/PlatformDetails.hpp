@@ -3,12 +3,7 @@
 
 #include <QObject>
 #include <QPoint>
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-#include <QJSValue>
-#else
-#include <QScriptValue>
-#define QJSValue QScriptValue
-#endif
+#include <QScriptValue> // Use QScriptValue instead of QJSValue in Qt 4
 
 #include "process/LokinetProcessManager.hpp"
 
@@ -20,7 +15,6 @@ class PlatformDetails : public QObject
     Q_OBJECT
 
 public:
-
     ///  return if we are on windows
     Q_INVOKABLE static bool isWindows();
     /// return if we are on linux
@@ -44,9 +38,15 @@ public:
     Q_INVOKABLE static bool stopLokinetIfWeStartedIt();
     Q_INVOKABLE static bool isLokinetRunning();
 
-    Q_INVOKABLE static void downloadBootstrapFile(const QString& url, const QJSValue& callback);
+    Q_INVOKABLE static void downloadBootstrapFile(const QString& url, const QScriptValue& callback);
 
     Q_INVOKABLE static QPoint getAbsoluteCursorPosition();
+
+private slots:
+    void handleBootstrapFileDownloaded(int error, const QString& message, QScriptValue callback);
+
+signals:
+    void bootstrapFileDownloaded(int error, const QString& message);
 };
- 
+
 #endif // __LOKI_PLATFORM_DETAILS_HPP__

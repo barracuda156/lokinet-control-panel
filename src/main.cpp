@@ -1,14 +1,8 @@
 #include <QApplication>
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-#include <QQmlApplicationEngine>
-#else
 #include <QtDeclarative>
 #include <QDeclarativeEngine>
 #include <QtScript>
 #include <QJsonObject.h>
-#define QQmlApplicationEngine QDeclarativeEngine
-#define QStringLiteral QString::fromUtf8
-#endif
 #include <QIcon>
 #include <QDebug>
 #include <QtGlobal>
@@ -63,13 +57,6 @@ int32_t main(int32_t argc, char *argv[])
     qmlRegisterType<ApiPoller>("ApiPoller", 1, 0, "ApiPoller");
     qmlRegisterType<BandwidthChartData>("BandwidthChartData", 1, 0, "BandwidthChartData");
 #endif
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-    QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-#endif
-#endif
     
     lmq.start();
     lmq.add_timer([]() {
@@ -91,11 +78,11 @@ int32_t main(int32_t argc, char *argv[])
     app.setQuitOnLastWindowClosed(false);
     QCoreApplication::setApplicationName("Lokinet Control Panel");
 
-    QQmlApplicationEngine engine;
+    QDeclarativeEngine engine;
     engine.globalObject().setProperty("nohide", nohide);
     engine.globalObject().setProperty("notray", notray);
     engine.globalObject().setProperty("isSystemd", isSystemd);
-    engine.load(QUrl(QStringLiteral("qrc:/res/qml/main.qml")));
+    engine.load(QUrl(QString::fromUtf8("qrc:/res/qml/main.qml")));
 
     return app.exec();
 }

@@ -2,11 +2,7 @@
 
 #include <QPoint>
 #include <QCursor>
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-#include <QJSEngine>
-#else
 #include <QScriptEngine>
-#endif
 #include <QDebug>
 
 #include "process/LokinetProcessManager.hpp"
@@ -14,19 +10,18 @@
 // PlatformDetails::isWindows
 Q_INVOKABLE bool PlatformDetails::isWindows() {
 #if defined(Q_OS_WINDOWS)
-	return true;
+    return true;
 #else
-	return false;
+    return false;
 #endif
-
 }
 
 // PlatformDetails::isLinux
 Q_INVOKABLE bool PlatformDetails::isLinux() {
 #if defined(Q_OS_LINUX)
-	return true;
+    return true;
 #else
-	return false;
+    return false;
 #endif
 }
 
@@ -57,32 +52,32 @@ Q_INVOKABLE bool PlatformDetails::isGayland() {
       return std::string{desktop} == "GNOME";
     }
   }
-	return false;
+    return false;
 #else
-	return false;
+    return false;
 #endif
 }
 
 // PlatformDetails::isMacOS
 Q_INVOKABLE bool PlatformDetails::isMacOS() {
 #if defined(Q_OS_MACOS)
-	return true;
+    return true;
 #else
-	return false;
+    return false;
 #endif
 }
 
 // PlatformDetails::isDebug
 Q_INVOKABLE bool PlatformDetails::isDebug() {
 #if defined(QT_DEBUG)
-	return true;
+    return true;
 #else
-	return false;
+    return false;
 #endif
 }
 
 Q_INVOKABLE bool PlatformDetails::startLokinetProcess() {
-	return LokinetProcessManager::instance()->startLokinetProcess();
+    return LokinetProcessManager::instance()->startLokinetProcess();
 }
 
 Q_INVOKABLE bool PlatformDetails::stopLokinetProcess() {
@@ -90,47 +85,62 @@ Q_INVOKABLE bool PlatformDetails::stopLokinetProcess() {
 }
 
 Q_INVOKABLE bool PlatformDetails::forciblyStopLokinetProcess() {
-	return LokinetProcessManager::instance()->forciblyStopLokinetProcess();
+    return LokinetProcessManager::instance()->forciblyStopLokinetProcess();
 }
 
 Q_INVOKABLE bool PlatformDetails::managedStopLokinetProcess() {
-	return LokinetProcessManager::instance()->managedStopLokinetProcess();
+    return LokinetProcessManager::instance()->managedStopLokinetProcess();
 }
 
 Q_INVOKABLE bool PlatformDetails::stopLokinetIfWeStartedIt() {
-	return LokinetProcessManager::instance()->stopLokinetIfWeStartedIt();
+    return LokinetProcessManager::instance()->stopLokinetIfWeStartedIt();
 }
 
 Q_INVOKABLE bool PlatformDetails::isLokinetRunning() {
-	auto status = LokinetProcessManager::instance()->queryProcessStatus();
-	return (status == LokinetProcessManager::ProcessStatus::Running);
+    auto status = LokinetProcessManager::instance()->queryProcessStatus();
+    return (status == LokinetProcessManager::ProcessStatus::Running);
 }
 
-Q_INVOKABLE void PlatformDetails::downloadBootstrapFile(const QString& url, const QJSValue& callback) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    if (! callback.isUndefined() && ! callback.isCallable()) {
-        qDebug() << "callback should be a function";
-    	return;
-    }
-#else
+class PlatformDetails : public QObject {
+    Q_OBJECT
+
+public:
+    Q_INVOKABLE void downloadBootstrapFile(const QString& url, const QScriptValue& callback);
+
+signals:
+    void bootstrapFileDownloaded(int error, const QString& message);
+
+private slots:
+    void handleBootstrapFileDownloaded(int error, const QString& message, QScriptValue callback);
+
+private:
+    LokinetProcessManager* g_processManager = LokinetProcessManager::instance();
+};
+
+void PlatformDetails::downloadBootstrapFile(const QString& url, const QScriptValue& callback) {
     if (callback.isValid() && ! callback.isFunction()) {
         qDebug() << "callback should be a function";
-    	return;
+        return;
     }
-#endif
-    auto manager = LokinetProcessManager::instance();
+
+    connect(this, SIGNAL(bootstrapFileDownloaded(int, QString)), this, SLOT(handleBootstrapFileDownloaded(int, QString, callback)), Qt::UniqueConnection);
+
     manager->downloadBootstrapFile(url.toStdString(), [=](int error, const std::string& msg) {
-
-    	QJSValue callbackCopy(callback);
-
-        QJSValue result = callbackCopy.call({
-            callbackCopy.engine()->toScriptValue(error),
-            callbackCopy.engine()->toScriptValue(QString(msg.c_str()))
-        });
-        if (result.isError()) {
-            qDebug() << "Error attempting callback";
-        }
+        emit bootstrapFileDownloaded(error, QString::fromStdString(msg));
     });
+}
+
+void PlatformDetails::handleBootstrapFileDownloaded(int error, const QString& message, QScriptValue callback) {
+    QScriptEngine* engine = callback.engine();
+
+    QScriptValue callbackCopy = callback;
+    QScriptValue result = callbackCopy.call(QScriptValue(), QScriptValueList() << engine->toScriptValue(error) << engine->toScriptValue(message));
+
+    if (result.isError()) {
+        qDebug() << "Error attempting callback";
+    }
+
+    disconnect(this, SIGNAL(bootstrapFileDownloaded(int, QString)), this, SLOT(handleBootstrapFileDownloaded(int, QString, callback)));
 }
 
 Q_INVOKABLE QPoint PlatformDetails::getAbsoluteCursorPosition() {

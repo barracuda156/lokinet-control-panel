@@ -4,11 +4,11 @@
 #include <unordered_map>
 #include <functional>
 #include <mutex>
- 
+
 #include <QObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
- 
+
 /**
  * An HTTP Client that uses QNetworkAccessManager behind the scenes but allows
  * for responses and requests to be correlated (something that
@@ -21,7 +21,6 @@ class HttpClient : public QObject
     Q_DISABLE_COPY(HttpClient);
 
 public:
-
     using ReplyCallback = std::function<void(QNetworkReply*)>;
 
     HttpClient();
@@ -48,7 +47,10 @@ public:
      *                 error is received
      */
     void get(const std::string& url, ReplyCallback callback);
- 
+
+private slots:
+    void onFinished(QNetworkReply* reply);
+
 private:
     QNetworkAccessManager* m_networkManager = nullptr;
 
@@ -57,5 +59,5 @@ private:
     std::unordered_map<uint32_t, ReplyCallback> m_callbackMap;
 
 };
- 
+
 #endif // __LOKI_HTTP_CLIENT_H__

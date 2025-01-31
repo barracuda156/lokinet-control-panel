@@ -7,33 +7,13 @@
 HttpClient::HttpClient() {
     m_networkManager = new QNetworkAccessManager();
 
-// FIXME: see if this can be fixed instead.
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     // update QNAM's config with a much lower timeout value since this goes over localhost
     QNetworkConfiguration qnamConf = m_networkManager->activeConfiguration();
     qnamConf.setConnectTimeout(250); // in milliseconds
     m_networkManager->setConfiguration(qnamConf);
-#endif
 
-    QObject::connect(m_networkManager, &QNetworkAccessManager::finished, this, [=](QNetworkReply *reply) {
-
-        uint32_t callbackId = reply->property("callbackId").toUInt();
-
-        std::unique_lock<std::mutex> lock(m_callbackMutex);
-
-        auto itr = m_callbackMap.find(callbackId);
-        Q_ASSERT(itr != m_callbackMap.end());
-
-        // pull our callback out of the map
-        auto callback = itr->second;
-        m_callbackMap.erase(itr);
-
-        lock.unlock();
-
-        callback(reply);
-
-        reply->deleteLater();
-    });
+    // Use the old syntax for connecting signals and slots
+    QObject::connect(m_networkManager, SIGNAL(finished(QNetworkReply*)), this, SLOT(onFinished(QNetworkReply*)));
 }
 
 // HttpClient Destructor
@@ -42,9 +22,28 @@ HttpClient::~HttpClient() {
     m_networkManager = nullptr;
 }
 
-// HttpClient::request
-void HttpClient::postJson(const std::string& url, const std::string& payload, ReplyCallback callback) {
+// Slot to handle the finished signal
+void HttpClient::onFinished(QNetworkReply *reply) {
+    uint32_t callbackId = reply->property("callbackId").toUInt();
 
+    std::unique_lock<std::mutex> lock(m_callbackMutex);
+
+    auto itr = m_callbackMap.find(callbackId);
+    Q_ASSERT(itr != m_callbackMap.end());
+
+    // pull our callback out of the map
+    auto callback = itr->second;
+    m_callbackMap.erase(itr);
+
+    lock.unlock();
+
+    callback(reply);
+
+    reply->deleteLater();
+}
+
+// HttpClient::postJson
+void HttpClient::postJson(const std::string& url, const std::string& payload, ReplyCallback callback) {
     std::lock_guard<std::mutex> guard(m_callbackMutex);
 
     m_lastCallbackId++;
@@ -61,12 +60,10 @@ void HttpClient::postJson(const std::string& url, const std::string& payload, Re
 
     // set our callbackId on this reply so that we can correlate the response with the callback
     reply->setProperty("callbackId", QVariant(m_lastCallbackId));
-
 }
 
-// HttpClient::request
+// HttpClient::get
 void HttpClient::get(const std::string& url, ReplyCallback callback) {
-
     std::lock_guard<std::mutex> guard(m_callbackMutex);
 
     // TODO: DRY
@@ -82,6 +79,4 @@ void HttpClient::get(const std::string& url, ReplyCallback callback) {
 
     // set our callbackId on this reply so that we can correlate the response with the callback
     reply->setProperty("callbackId", QVariant(m_lastCallbackId));
-
 }
- 

@@ -2,17 +2,13 @@
 #define __LOKI_LOKINET_API_CLIENT_HPP__
 
 #include <QObject>
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-#include <QJSValue>
-#include <QJsonObject>
-#else
-#include <QScriptValue>
+#include <QScriptValue> // Use QScriptValue instead of QJSValue in Qt 4
+#include <QScriptValueList> // Use QScriptValueList instead of QJSValueList in Qt 4
 #include <QJsonObject.h>
-#define QJSValue QScriptValue
-#define QJSValueList QScriptValueList
-#endif
-#include <functional>
 #include <optional>
+#include <vector>
+#include <string>
+#include <functional>
 
 /**
  * A client that implements convenience wrappers around making specific
@@ -39,7 +35,6 @@ class LokinetApiClient : public QObject
     Q_DISABLE_COPY(LokinetApiClient);
 
 public:
-
   using ReplyCallback = std::function<void(std::optional<std::string>)>;
 
   LokinetApiClient();
@@ -54,8 +49,8 @@ public:
    * @param callback is a callback that will receive the reply or error
    * @return true on success, false otherwise
    */
-  bool invoke(const std::string& endpoint, QJsonObject args, ReplyCallback callback);
-  Q_INVOKABLE bool invoke(const std::string& endpoint, QJsonObject args, QJSValue callback);
+    Q_INVOKABLE bool invoke(const std::string& endpoint, QJsonObject args, ReplyCallback callback);
+    Q_INVOKABLE bool invoke(const std::string& endpoint, QJsonObject callargs, QScriptValue callback);
 
   /**
    * The following functions are conveniences for invoking particular API
@@ -102,9 +97,12 @@ public:
   bool llarpAdminDie(ReplyCallback callback) {
     return invoke("llarp.halt", QJsonObject{}, callback);
   }
+
 signals:
-    void
-    CallCallback(QJSValue callback, QJSValueList args);
+    void CallCallback(QScriptValue callback, QScriptValueList args);
+
+private slots:
+    void handleCallCallback(QScriptValue callback, QScriptValueList args);
 };
 
 #endif // __LOKI_LOKINET_API_CLIENT_HPP__
